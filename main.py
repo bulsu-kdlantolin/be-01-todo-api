@@ -31,7 +31,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
 
-@app.get("/")
+@app.get("/", description="Get API information")
 def home():
     return { 
         "name": "Task API", 
@@ -39,17 +39,17 @@ def home():
         "endpoints": ["/tasks"] 
     }
 
-@app.get("/health")
+@app.get("/health", description="Check the health of the API")
 def health():
     return {
         "status": "ok"
     }
 
-@app.get("/tasks")
+@app.get("/tasks", description="Get all tasks")
 def get_tasks():
     return tasks
 
-@app.get("/tasks/{task_id}")
+@app.get("/tasks/{task_id}", description="Get a task by ID")
 def get_task(task_id: int):
     for task in tasks:
         if task["id"] == task_id:
@@ -59,7 +59,7 @@ def get_task(task_id: int):
         content={"error": f"Task {task_id} not found"}
     )
 
-@app.post("/tasks")
+@app.post("/tasks", description="Create a new task")
 def create_task(task: Task):
     if not task.title:
         return JSONResponse(
@@ -75,7 +75,7 @@ def create_task(task: Task):
     tasks.append(new_task)
     return JSONResponse(status_code=201, content=new_task)
 
-@app.put("/tasks/{task_id}")
+@app.put("/tasks/{task_id}", description="Update a task by ID")
 def update_task(task_id: int, task: TaskUpdate):
     if task.title is None and task.done is None:
         return JSONResponse(
@@ -100,7 +100,7 @@ def update_task(task_id: int, task: TaskUpdate):
         content={"error": f"Task {task_id} not found"}
     )
 
-@app.delete("/tasks/{task_id}")
+@app.delete("/tasks/{task_id}", description="Delete a task by ID")
 def delete_task(task_id: int):
     for i, task in enumerate(tasks):
         if task["id"] == task_id:
