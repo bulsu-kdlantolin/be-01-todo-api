@@ -109,3 +109,55 @@ or return type.
 
 The API's actual behavior and its documented contract diverge here. In a real
 production API, this would be worth fixing with `response_model` declarations.
+
+## AI vs me
+
+### My prompt (Stage 7, written from memory)
+
+```text
+I want you to build a simple CRUD ToDo API using Python + FastAPI(uvicorn server). 
+Start with three given tasks with keys: id: 1, title: (up to you), done: True/False.
+The API Should consist of GET(All tasks), GET(Health status), GET(task_id),
+POST, PUT, and DELETE with proper descriptions for each. These should handle different
+error and invalid cases then return JSONResponse of specific status code such as 400, 404, 422
+and others with the necessary message with it. You should also consider using pydantic class for validating task and task update variables.
+```
+
+### What did the AI do better?
+
+* **OpenAPI Documentation Quality:** Added tags (`Tasks`, `System`), summaries, descriptions, and explicit `response_model` types for clean, complete Swagger UI docs instead of untyped `200` responses.
+* **Separation of Concerns:** Split schemas into `TaskCreate`, `TaskUpdate`, and `TaskResponse` to prevent clients from attempting to inject IDs during creation.
+* **Path Validation:** Used `Path(..., gt=0)` to catch invalid IDs (`<= 0`) at the framework layer before hitting business logic.
+* **Avoided Naive List-Length ID Bugs:** Keyed `max(tasks_db.keys()) + 1` directly off dictionary keys rather than a naive collection length (`len()`), preventing the ID duplicate collisions that occur when middle items are deleted.
+
+### What did the AI get wrong or quietly ignore?
+
+* **`DELETE` Status Contract:** Returned `200 OK` with an acknowledgment JSON body instead of the standard REST convention of `204 No Content` with an empty body.
+
+### What did my prompt forget to specify?
+
+* **Root Endpoint (`GET /`):** Completely omitted the front-door metadata endpoint and its required JSON payload from the prompt's endpoint list.
+* **Exact Error Schema:** Asked for error responses without specifying the required target key format (`{"error": "<msg>"}`), leading the AI to invent its own nested `{"status": "error", "message": "..."}` envelope.
+* **`204` Deletion Semantics:** Failed to specify that a successful deletion must return `204 No Content` with an empty response body.
+* **Status Code Boundaries (400 vs. 422):** Grouped status codes together ("400, 404, 422") without defining which scenario triggers which code; because empty strings were not explicitly designated for `400`, the AI made the defensible choice to enforce string constraints via Pydantic (`min_length=1`), routing empty strings to `422 Unprocessable Entity`.
+
+---
+
+### The Rematch: Prompt v2 (Written from the findings)
+
+```text
+Build a CRUD ToDo API using Python + FastAPI and Uvicorn with in-memory storage seeded with 3 example tasks (id, title, done).
+
+Include these exact endpoints:
+- GET /: returns {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
+- GET /health: returns {"status": "ok"}
+- GET /tasks: returns the list of all tasks
+- GET /tasks/{task_id}: returns the task by ID, or 404 with {"error": "Task {id} not found"}
+- POST /tasks: accepts {"title": "..."}; returns 201 with the new task; if title is missing or empty string "", return 400 with {"error": "Title cannot be empty"}
+- PUT /tasks/{task_id}: updates title and/or done; returns the updated task; return 404 if missing, or 400 with {"error": "..."} if empty body or invalid title
+- DELETE /tasks/{task_id}: removes task and returns status 204 with an empty body; return 404 with {"error": "Task {id} not found"} if missing
+
+Ensure all error responses strictly follow the flat JSON shape {"error": "<message>"}. Use Pydantic for validation, and include clean endpoint descriptions and tags for Swagger UI.
+```
+
+**What changed:** Prompt v2 eliminated specification gaps by explicitly defining the root metadata endpoint, binding each HTTP status code directly to its trigger condition, enforcing a flat `{"error": "..."}` schema, and mandating `204 No Content` with an empty body for deletions.
