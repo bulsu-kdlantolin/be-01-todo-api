@@ -71,7 +71,7 @@ content-type: application/json
 
 ## Swagger UI
 
-![Swagger PUT example](be-01-todo-api/screenshot/swagger-put.png)
+<img width="1415" height="877" alt="Screenshot (3226)" src="https://github.com/user-attachments/assets/9dd36388-ce45-4d2f-bb95-6d7a45cbed65" />
 
 ## Notable bugs found while building this
 
